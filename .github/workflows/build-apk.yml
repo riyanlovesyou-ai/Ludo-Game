@@ -6,33 +6,42 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
+      - name: Find and extract game project ZIP
+        run: |
+          echo "Repository files:"
+          ls -la
+          ZIP_FILE=$(find . -maxdepth 1 -type f -iname '*.zip' -print -quit)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: No ZIP archive found in repository root. Upload the Game_Ludo_Host_GitHub_Build.zip file to the repository root."
+            exit 1
+          fi
+          echo "Extracting: $ZIP_FILE"
+          mkdir -p source
+          unzip -q "$ZIP_FILE" -d source
+          ls -la source
+
       - name: Install Gradle
         run: |
-          curl -L https://services.gradle.org/distributions/gradle-8.9-bin.zip -o gradle.zip
-          unzip -q gradle.zip
-
-      - name: Extract Game Project
-        run: |
-          mkdir source
-          unzip Game_Ludo_Host_GitHub_Build.zip -d source
+          curl -L https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
 
       - name: Build APK
-        run: |
-          ./gradle-8.9/bin/gradle -p source assembleDebug
+        working-directory: source
+        run: /tmp/gradle-8.9/bin/gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Ludo-Game-APK
+          name: ludo-game-apk
           path: source/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
